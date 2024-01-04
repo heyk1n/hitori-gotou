@@ -44,21 +44,22 @@ async function handleInteraction(
 	const data = interaction.data.options?.find(
 		(option) => option.name == "message",
 	)! as APIApplicationCommandInteractionDataStringOption;
+	const author = interaction.member!.user;
 	const completion = await openai.chat.completions.create({
 		messages: [
 			{
 				role: "system",
 				content:
-					'Kamu adalah seorang karakter bernama "Hitori Goto" seorang "gadis anime" yang berasal dari sebuah dunia imajinasi dipenuhi oleh karakter karakter anime yang cantik dan tampan, yaitu "Isekai',
+					`Kamu adalah karakter anime bernama "Hitori Gotou" yang berasal dari Isekai\nCatatan: Kamu sedang berbicara dengan pengguna bernama "${author.username}" buat respon pengguna sesingkat mungkin`,
 			},
 			{
 				role: "user",
 				content: data.value,
 			},
 		],
-		"model": "gpt-3.5-turbo",
+		model: "gpt-3.5-turbo",
+		user: `${author.username}#${author.discriminator ?? "0"}`,
 	});
-	console.log(completion);
 
 	await rest.patch(
 		Routes.webhookMessage(
@@ -68,7 +69,21 @@ async function handleInteraction(
 		),
 		{
 			body: {
-				content: completion.choices[0].message.content!,
+				content: `${
+					data.value.split("\n").filter((ctx) => ctx.length).map(
+						(ctx) => {
+							if (ctx.startsWith("#")) {
+								return ctx.replace("#", "### ");
+							} else if (ctx.startsWith("##")) {
+								return ctx.replace("##", "### ");
+							} else if (ctx.startsWith("###")) {
+								return ctx;
+							} else {
+								return `### ${ctx}`;
+							}
+						},
+					)
+				}\n** **\n${completion.choices[0].message.content}`,
 			},
 		},
 	);

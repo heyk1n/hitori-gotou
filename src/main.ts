@@ -45,16 +45,13 @@ async function handler(request: Request) {
 		Deno.env.get("DISCORD_TOKEN")!,
 	);
 	const interaction: APIInteraction = JSON.parse(body);
-	console.log("interaction received");
 
 	if (InteractionUtils.isApplicationCommand(interaction)) {
 		const command = manifest.commands.find((command) =>
 			command.data.name === interaction.data.name
 		);
-		console.log(command);
 		if (command) {
 			if (CommandUtils.isChatInput(command)) {
-				console.log("nyampe nih");
 				return await command.execute({
 					interaction:
 						interaction as APIChatInputApplicationCommandInteraction,

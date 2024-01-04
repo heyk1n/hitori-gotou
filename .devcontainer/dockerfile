@@ -7,5 +7,3 @@ ENV PATH=${DENO_INSTALL}/bin:${PATH}
 
 RUN deno install -A https://deno.land/x/deploy@1.9.0/deployctl.ts
 ENV PATH=/root/.deno/bin:${PATH}
-
-RUN deno cache src/main.ts
