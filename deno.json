@@ -1,0 +1,13 @@
+{
+    "fmt": {
+        "useTabs": true,
+        "indentWidth": 4,
+        "include": [
+            "src/"
+        ]
+    },
+    "imports": {
+        "discord": "https://deno.land/x/discord_api_types@0.37.67/v10.ts",
+        "std/": "https://deno.land/std@0.210.0/"
+    }
+}

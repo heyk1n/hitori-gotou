@@ -2,5 +2,12 @@
 	"build": {
 		"dockerfile": "dockerfile"
 	},
-	"remoteUser": "root"
+	"remoteUser": "root",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"denoland.vscode-deno"
+			]
+		}
+	}
 }
