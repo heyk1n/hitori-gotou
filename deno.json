@@ -1,4 +1,13 @@
 {
+    "deploy": {
+        "project": "5f6b20c4-3f5a-4d2f-96de-55f43b6389cd",
+        "include": [
+            "deno.json",
+            "deno.lock",
+            "src/**"
+        ],
+        "entrypoint": "src/main.ts"
+    },
     "fmt": {
         "useTabs": true,
         "indentWidth": 4,
@@ -7,7 +16,13 @@
         ]
     },
     "imports": {
-        "discord": "https://deno.land/x/discord_api_types@0.37.67/v10.ts",
+        "@discordjs/rest": "npm:@discordjs/rest@2.2.0",
+        "discord": "https://deno.land/x/discord_api_types@0.37.66/v10.ts",
+        "openai": "https://deno.land/x/openai@v4.24.1/mod.ts",
         "std/": "https://deno.land/std@0.210.0/"
+    },
+    "tasks": {
+        "build": "deno run -A --check src/build.ts",
+        "test": "deno run -A --watch --check src/main.ts"
     }
 }

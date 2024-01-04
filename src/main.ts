@@ -1,9 +1,21 @@
-import { type APIInteraction, InteractionResponseType } from "discord";
+import {
+	type APIChatInputApplicationCommandInteraction,
+	type APIInteraction,
+	APIVersion,
+	InteractionResponseType,
+	MessageFlags,
+	Routes,
+} from "discord";
 import { Status } from "std/http/http_status.ts";
 import { decodeHex } from "std/encoding/hex.ts";
 import tweetnacl from "npm:tweetnacl@1.0.3";
+import { REST } from "@discordjs/rest";
 
+import CommandUtils from "./utils/command.ts";
 import InteractionUtils from "./utils/interaction.ts";
+
+import manifest from "./manifest.gen.ts";
+import OpenAI from "openai";
 
 async function handler(request: Request) {
 	const invalidRequest = new Response(
@@ -29,9 +41,47 @@ async function handler(request: Request) {
 
 	if (!valid) return invalidRequest;
 
+	const rest = new REST({ version: APIVersion }).setToken(
+		Deno.env.get("DISCORD_TOKEN")!,
+	);
 	const interaction: APIInteraction = JSON.parse(body);
+	console.log("interaction received");
 
-	if (InteractionUtils.isPingInteraction(interaction)) {
+	if (InteractionUtils.isApplicationCommand(interaction)) {
+		const command = manifest.commands.find((command) =>
+			command.data.name === interaction.data.name
+		);
+		console.log(command);
+		if (command) {
+			if (CommandUtils.isChatInput(command)) {
+				console.log("nyampe nih");
+				return await command.execute({
+					interaction:
+						interaction as APIChatInputApplicationCommandInteraction,
+					openai: new OpenAI(),
+					rest,
+				});
+			} else {
+				return new Response(
+					`Unknown command type. (${interaction.data.type})`,
+				);
+			}
+		} else {
+			return Response.json({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: `Ehh~ c- command nya ga ada mas.,`,
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+		}
+	} else if (InteractionUtils.isPing(interaction)) {
+		await rest.put(
+			Routes.applicationCommands(Deno.env.get("DISCORD_ID")!),
+			{
+				body: manifest.commands.map((command) => command.data),
+			},
+		);
 		return Response.json({
 			type: InteractionResponseType.Pong,
 		});
