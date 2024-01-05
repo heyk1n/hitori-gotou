@@ -3,7 +3,7 @@ import type {
 	APIInteraction,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord";
-import type { OpenAI } from "openai";
+import type { OpenAI } from "openai/mod.ts";
 import type { REST } from "@discordjs/rest";
 
 export interface ExecuteOptions<
@@ -12,6 +12,7 @@ export interface ExecuteOptions<
 	interaction: T;
 	openai: OpenAI;
 	rest: REST;
+	kv: Deno.Kv;
 }
 
 export interface ChatInputCommand {

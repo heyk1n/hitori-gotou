@@ -7,7 +7,8 @@ import {
 	InteractionResponseType,
 	Routes,
 } from "discord";
-import type { OpenAI } from "openai";
+import type { OpenAI } from "openai/mod.ts";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions.ts";
 import type { REST } from "@discordjs/rest";
 
 export default {
@@ -24,8 +25,8 @@ export default {
 		],
 		dm_permission: false,
 	},
-	execute({ interaction, openai, rest }): Response {
-		handleInteraction(interaction, openai, rest);
+	execute({ interaction, openai, rest, kv }): Response {
+		handleInteraction(interaction, openai, rest, kv);
 		const interactionResponse:
 			APIInteractionResponseDeferredChannelMessageWithSource = {
 				type: InteractionResponseType.DeferredChannelMessageWithSource,
@@ -40,11 +41,23 @@ async function handleInteraction(
 	interaction: APIChatInputApplicationCommandInteraction,
 	openai: OpenAI,
 	rest: REST,
+	kv: Deno.Kv,
 ): Promise<void> {
 	const data = interaction.data.options?.find(
 		(option) => option.name == "message",
 	)! as APIApplicationCommandInteractionDataStringOption;
 	const author = interaction.member!.user;
+
+	const cache = await kv.get<ChatCompletionMessageParam[]>([
+		"threads",
+		interaction.channel.id,
+	]);
+	const messages = cache.value ?? [];
+	const newMessage: ChatCompletionMessageParam = {
+		role: "user",
+		content: data.value,
+	};
+
 	const completion = await openai.chat.completions.create({
 		messages: [
 			{
@@ -52,14 +65,19 @@ async function handleInteraction(
 				content:
 					`Kamu adalah karakter anime bernama "Hitori Gotou" yang berasal dari Isekai\nCatatan: Kamu sedang berbicara dengan pengguna bernama "${author.username}" buat respon pengguna sesingkat mungkin`,
 			},
-			{
-				role: "user",
-				content: data.value,
-			},
+			...messages,
+			newMessage,
 		],
 		model: "gpt-3.5-turbo",
 		user: `${author.username}#${author.discriminator ?? "0"}`,
 	});
+
+	const result = completion.choices[0].message;
+	await kv.set(["threads", interaction.channel.id], [
+		...messages,
+		newMessage,
+		result,
+	]);
 
 	await rest.patch(
 		Routes.webhookMessage(
@@ -83,7 +101,7 @@ async function handleInteraction(
 							}
 						},
 					)
-				}\n** **\n${completion.choices[0].message.content}`,
+				}\n** **\n${result.content}`,
 			},
 		},
 	);

@@ -15,7 +15,9 @@ import CommandUtils from "./utils/command.ts";
 import InteractionUtils from "./utils/interaction.ts";
 
 import manifest from "./manifest.gen.ts";
-import OpenAI from "openai";
+import OpenAI from "openai/mod.ts";
+
+const kv = await Deno.openKv();
 
 async function handler(request: Request) {
 	const invalidRequest = new Response(
@@ -57,6 +59,7 @@ async function handler(request: Request) {
 						interaction as APIChatInputApplicationCommandInteraction,
 					openai: new OpenAI(),
 					rest,
+					kv,
 				});
 			} else {
 				return new Response(

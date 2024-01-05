@@ -18,11 +18,14 @@
     "imports": {
         "@discordjs/rest": "npm:@discordjs/rest@2.2.0",
         "discord": "https://deno.land/x/discord_api_types@0.37.66/v10.ts",
-        "openai": "https://deno.land/x/openai@v4.24.1/mod.ts",
+        "openai/": "https://deno.land/x/openai@v4.24.1/",
         "std/": "https://deno.land/std@0.210.0/"
     },
     "tasks": {
         "build": "deno run -A --check src/build.ts",
-        "test": "deno run -A --watch --check src/main.ts"
-    }
+        "test": "deno run -A --check src/main.ts"
+    },
+    "unstable": [
+        "kv"
+    ]
 }
