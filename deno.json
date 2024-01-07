@@ -23,7 +23,7 @@
     },
     "tasks": {
         "build": "deno run -A --check src/build.ts",
-        "test": "deno run -A --check src/main.ts"
+        "test": "deno run -A --check --watch src/main.ts"
     },
     "unstable": [
         "kv"

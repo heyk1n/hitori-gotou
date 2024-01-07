@@ -246,6 +246,7 @@
     "https://deno.land/x/openai@v4.24.1/resources/beta/chat/completions.ts": "e7d1937f3c60fd04381f0104f640eb69c9371a42153e0583da4638a8b5b15c6a",
     "https://deno.land/x/openai@v4.24.1/resources/beta/threads/messages/files.ts": "bd50ec629f6216944a42455ea5f9ec992885df346637f46ede3a4c71fb04246f",
     "https://deno.land/x/openai@v4.24.1/resources/beta/threads/messages/messages.ts": "34ac0d56bf22a5fe6d7853d8c921b81f35817dc76ce7875f7763101bd7449544",
+    "https://deno.land/x/openai@v4.24.1/resources/beta/threads/messages/mod.ts": "bf9cbe23e1a9efe7c3ca8a1c2f314e95d55925838cd4f8ec6564e3f3c95f6b06",
     "https://deno.land/x/openai@v4.24.1/resources/beta/threads/runs/runs.ts": "67cd41f5cbbdc6b6344886219ed881498c9a2d67ee9551ba5675560afe67d0e9",
     "https://deno.land/x/openai@v4.24.1/resources/beta/threads/runs/steps.ts": "74cab30e50485eb1a14c6a4430ed4e9976115c06f09ffff009d8b0818849d7d1",
     "https://deno.land/x/openai@v4.24.1/resources/beta/threads/threads.ts": "c38ee69e89a6ca36de824fd4b6997c77ac603aa928ffb97ea3e3614a12e34ee4",

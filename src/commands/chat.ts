@@ -8,7 +8,7 @@ import {
 	Routes,
 } from "discord";
 import type { OpenAI } from "openai/mod.ts";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions.ts";
+import type { MessageContentText } from "openai/resources/beta/threads/messages/mod.ts";
 import type { REST } from "@discordjs/rest";
 
 export default {
@@ -46,63 +46,76 @@ async function handleInteraction(
 	const data = interaction.data.options?.find(
 		(option) => option.name == "message",
 	)! as APIApplicationCommandInteractionDataStringOption;
-	const author = interaction.member!.user;
+	const author = interaction.member!.user.username;
 
-	const cache = await kv.get<ChatCompletionMessageParam[]>([
+	let threadId: string;
+	const { value: thread } = await kv.get<string>([
 		"threads",
 		interaction.channel.id,
 	]);
-	const messages = cache.value ?? [];
-	const newMessage: ChatCompletionMessageParam = {
-		role: "user",
-		content: data.value,
-	};
+	if (thread) {
+		threadId = thread;
+	} else {
+		const newThread = await openai.beta.threads.create();
+		threadId = newThread.id;
+		await kv.set(["threads", interaction.channel.id], threadId);
+	}
 
-	const completion = await openai.chat.completions.create({
-		messages: [
-			{
-				role: "system",
-				content:
-					`Kamu adalah karakter anime bernama "Hitori Gotou" yang berasal dari Isekai\nCatatan: Kamu sedang berbicara dengan pengguna bernama "${author.username}" buat respon pengguna sesingkat mungkin`,
-			},
-			...messages,
-			newMessage,
-		],
-		model: "gpt-3.5-turbo",
-		user: `${author.username}#${author.discriminator ?? "0"}`,
+	await openai.beta.threads.messages.create(threadId, {
+		role: "user",
+		content: `${author}: ${data.value}`,
 	});
 
-	const result = completion.choices[0].message;
-	await kv.set(["threads", interaction.channel.id], [
-		...messages,
-		newMessage,
-		result,
-	]);
+	const run = await openai.beta.threads.runs.create(threadId, {
+		assistant_id: Deno.env.get("OPENAI_ASSISTANT_ID")!,
+		additional_instructions:
+			`Nama lawan bicara pada dialog, tapi, jangan gunakan format yang sama untuk membalas pesan pengguna, cukup masukkan jawaban mu saja`,
+	});
 
-	await rest.patch(
-		Routes.webhookMessage(
-			interaction.application_id,
-			interaction.token,
-			"@original",
-		),
-		{
-			body: {
-				content: `${
-					data.value.split("\n").filter((ctx) => ctx.length).map(
-						(ctx) => {
-							if (ctx.startsWith("#")) {
-								return ctx.replace("#", "### ");
-							} else if (ctx.startsWith("##")) {
-								return ctx.replace("##", "### ");
-							} else if (ctx.startsWith("###")) {
-								return ctx;
-							} else {
-								return `### ${ctx}`;
-							}
-						},
-					)
-				}\n** **\n${result.content}`,
+	const intervalId = setInterval(() => {
+		handleRun(interaction, openai);
+	}, 2_000);
+
+	async function handleRun(
+		interaction: APIChatInputApplicationCommandInteraction,
+		openai: OpenAI,
+	): Promise<void> {
+		const currentRun = await openai.beta.threads.runs.retrieve(
+			threadId,
+			run.id,
+		);
+
+		let content: string;
+
+		if (["queued", "in_progress"].includes(currentRun.status)) {
+			return;
+		} else {
+			clearInterval(intervalId);
+			if (currentRun.status == "completed") {
+				const results = await openai.beta.threads.messages.list(
+					threadId,
+				);
+
+				const initResponse = results.data.at(0)!;
+				content = (initResponse.content.find((ctx) =>
+					ctx.type == "text"
+				) as MessageContentText)?.text.value ??
+					"Aku lagi sibuk kak, maaf ya >.<";
+			} else {
+				content = `Failed to conplete runs. (${currentRun.status})`;
+			}
+		}
+
+		await rest.patch(
+			Routes.webhookMessage(
+				interaction.application_id,
+				interaction.token,
+			),
+			{
+				body: {
+					content,
+				},
 			},
-		},
-	);
+		);
+	}
 }
