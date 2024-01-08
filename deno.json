@@ -4,7 +4,7 @@
         "include": [
             "deno.json",
             "deno.lock",
-            "src/**"
+            "src/"
         ],
         "entrypoint": "src/main.ts"
     },
@@ -20,6 +20,13 @@
         "discord": "https://deno.land/x/discord_api_types@0.37.66/v10.ts",
         "openai/": "https://deno.land/x/openai@v4.24.1/",
         "std/": "https://deno.land/std@0.210.0/"
+    },
+    "lint": {
+        "rules": {
+            "tags": [
+                "recommended"
+            ]
+        }
     },
     "tasks": {
         "build": "deno run -A --check src/build.ts",

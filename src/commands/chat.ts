@@ -1,5 +1,6 @@
 import type { ChatInputCommand } from "../types.d.ts";
 import {
+	type APIApplicationCommandInteractionDataOption,
 	type APIApplicationCommandInteractionDataStringOption,
 	type APIChatInputApplicationCommandInteraction,
 	type APIInteractionResponseDeferredChannelMessageWithSource,
@@ -8,7 +9,10 @@ import {
 	Routes,
 } from "discord";
 import type { OpenAI } from "openai/mod.ts";
-import type { MessageContentText } from "openai/resources/beta/threads/messages/mod.ts";
+import type {
+	MessageContentImageFile,
+	MessageContentText,
+} from "openai/resources/beta/threads/messages/mod.ts";
 import type { REST } from "@discordjs/rest";
 
 export default {
@@ -44,7 +48,9 @@ async function handleInteraction(
 	kv: Deno.Kv,
 ): Promise<void> {
 	const data = interaction.data.options?.find(
-		(option) => option.name == "message",
+		(option: APIApplicationCommandInteractionDataOption) =>
+			option.name == "message" &&
+			option.type == ApplicationCommandOptionType.String,
 	)! as APIApplicationCommandInteractionDataStringOption;
 	const author = interaction.member!.user.username;
 
@@ -94,12 +100,14 @@ async function handleInteraction(
 			if (currentRun.status == "completed") {
 				const results = await openai.beta.threads.messages.list(
 					threadId,
+					{ limit: 1 },
 				);
 
 				const initResponse = results.data.at(0)!;
-				content = (initResponse.content.find((ctx) =>
-					ctx.type == "text"
-				) as MessageContentText)?.text.value ??
+				content = (initResponse.content.find((
+					ctx: MessageContentImageFile | MessageContentText,
+				) => ctx.type == "text") as MessageContentText)?.text
+					.value ??
 					"Aku lagi sibuk kak, maaf ya >.<";
 			} else {
 				content = `Failed to conplete runs. (${currentRun.status})`;
