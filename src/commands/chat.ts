@@ -6,6 +6,7 @@ import {
 	type APIInteractionResponseDeferredChannelMessageWithSource,
 	ApplicationCommandOptionType,
 	InteractionResponseType,
+	type RESTPostAPIChannelMessageJSONBody,
 	Routes,
 } from "discord";
 import type { OpenAI } from "openai/mod.ts";
@@ -52,30 +53,28 @@ async function handleInteraction(
 			option.name == "message" &&
 			option.type == ApplicationCommandOptionType.String,
 	)! as APIApplicationCommandInteractionDataStringOption;
-	const author = interaction.member!.user.username;
+	const author = interaction.member!.user;
 
 	let threadId: string;
-	const { value: thread } = await kv.get<string>([
-		"threads",
-		interaction.channel.id,
-	]);
+	const kvKey = ["threads", interaction.channel.id];
+	const { value: thread } = await kv.get<string>(kvKey);
 	if (thread) {
 		threadId = thread;
 	} else {
 		const newThread = await openai.beta.threads.create();
 		threadId = newThread.id;
-		await kv.set(["threads", interaction.channel.id], threadId);
+		await kv.set(kvKey, threadId);
 	}
 
 	await openai.beta.threads.messages.create(threadId, {
 		role: "user",
-		content: `${author}: ${data.value}`,
+		content: `${author.username}: ${data.value}`,
 	});
 
 	const run = await openai.beta.threads.runs.create(threadId, {
 		assistant_id: Deno.env.get("OPENAI_ASSISTANT_ID")!,
 		additional_instructions:
-			`Nama lawan bicara pada dialog, tapi, jangan gunakan format yang sama untuk membalas pesan pengguna, cukup masukkan jawaban mu saja`,
+			`Nama lawan bicara ada pada dialog, tapi, jangan gunakan format yang sama untuk membalas pesan pengguna, cukup masukkan jawaban mu saja`,
 	});
 
 	const intervalId = setInterval(() => {
@@ -91,7 +90,11 @@ async function handleInteraction(
 			run.id,
 		);
 
-		let content: string;
+		const payload: RESTPostAPIChannelMessageJSONBody = {};
+		const apiRoute = Routes.webhookMessage(
+			interaction.application_id,
+			interaction.token,
+		);
 
 		if (["queued", "in_progress"].includes(currentRun.status)) {
 			return;
@@ -103,26 +106,43 @@ async function handleInteraction(
 					{ limit: 1 },
 				);
 
-				const initResponse = results.data.at(0)!;
-				content = (initResponse.content.find((
+				const initResponse = (results.data[0].content.find((
 					ctx: MessageContentImageFile | MessageContentText,
-				) => ctx.type == "text") as MessageContentText)?.text
-					.value ??
-					"Aku lagi sibuk kak, maaf ya >.<";
+				) => ctx.type == "text") as MessageContentText)?.text.value;
+
+				if (initResponse) {
+					payload.embeds = [
+						{
+							color: 0xffffff,
+							author: {
+								name: author.username +
+									(author.discriminator == "0"
+										? ""
+										: `#${author.discriminator}`),
+								icon_url: author.avatar
+									? rest.cdn.avatar(author.id, author.avatar)
+									: rest.cdn.defaultAvatar(
+										Number((BigInt(author.id) >> 22n) % 6n),
+									),
+							},
+							description: `### ${
+								data.value.replaceAll("\n", " ")
+							}\n** **\n${initResponse}`,
+						},
+					];
+				} else {
+					await rest.delete(apiRoute);
+				}
 			} else {
-				content = `Failed to conplete runs. (${currentRun.status})`;
+				payload.content =
+					`Failed to conplete runs. (${currentRun.status})`;
 			}
 		}
 
 		await rest.patch(
-			Routes.webhookMessage(
-				interaction.application_id,
-				interaction.token,
-			),
+			apiRoute,
 			{
-				body: {
-					content,
-				},
+				body: payload,
 			},
 		);
 	}
