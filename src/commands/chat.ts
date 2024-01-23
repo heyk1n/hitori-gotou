@@ -68,13 +68,13 @@ async function handleInteraction(
 
 	await openai.beta.threads.messages.create(threadId, {
 		role: "user",
-		content: `${author.username}: ${data.value}`,
+		content: `@${author.username}: ${data.value}`,
 	});
 
 	const run = await openai.beta.threads.runs.create(threadId, {
 		assistant_id: Deno.env.get("OPENAI_ASSISTANT_ID")!,
 		additional_instructions:
-			`Nama lawan bicara ada pada dialog, tapi, jangan gunakan format yang sama untuk membalas pesan pengguna, cukup masukkan jawaban mu saja`,
+			`Pesan dari pengguna berformat "@{nama_pengguna}: {isi_pesan}", gunakan format "{isi_pesan}" untuk membalas pesan pengguna`,
 	});
 
 	const intervalId = setInterval(() => {
@@ -101,16 +101,16 @@ async function handleInteraction(
 		} else {
 			clearInterval(intervalId);
 			if (currentRun.status == "completed") {
-				const results = await openai.beta.threads.messages.list(
+				const result = await openai.beta.threads.messages.list(
 					threadId,
 					{ limit: 1 },
-				);
+				).then((ctx) => ctx.data.at(0));
 
-				const initResponse = (results.data[0].content.find((
+				const botMessage = (result?.content.find((
 					ctx: MessageContentImageFile | MessageContentText,
 				) => ctx.type == "text") as MessageContentText)?.text.value;
 
-				if (initResponse) {
+				if (botMessage) {
 					payload.embeds = [
 						{
 							color: 0xffffff,
@@ -127,7 +127,7 @@ async function handleInteraction(
 							},
 							description: `### ${
 								data.value.replaceAll("\n", " ")
-							}\n** **\n${initResponse}`,
+							}\n** **\n${botMessage}`,
 						},
 					];
 				} else {

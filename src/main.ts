@@ -20,6 +20,8 @@ import OpenAI from "openai/mod.ts";
 const kv = await Deno.openKv();
 
 async function handler(request: Request) {
+	const requestUrl = new URL(request.url);
+
 	const invalidRequest = new Response(
 		"Invalid request.",
 		{ status: Status.Unauthorized },
@@ -76,12 +78,16 @@ async function handler(request: Request) {
 			});
 		}
 	} else if (InteractionUtils.isPing(interaction)) {
-		await rest.put(
-			Routes.applicationCommands(Deno.env.get("DISCORD_ID")!),
-			{
-				body: manifest.commands.map((command) => command.data),
-			},
-		);
+		const updateCommands = requestUrl.searchParams.get("updateCommands");
+
+		if (updateCommands === "true") {
+			await rest.put(
+				Routes.applicationCommands(Deno.env.get("DISCORD_ID")!),
+				{
+					body: manifest.commands.map((command) => command.data),
+				},
+			);
+		}
 		return Response.json({
 			type: InteractionResponseType.Pong,
 		});
